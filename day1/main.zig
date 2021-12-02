@@ -107,9 +107,10 @@ test "InputIterator" {
 pub fn main() anyerror!void {
     const input_file = try fs.cwd().openFile("day1/input.txt", .{});
     defer input_file.close();
+    const reader = io.bufferedReader(input_file.reader()).reader();
     const stdout = io.getStdOut().writer();
 
-    try stdout.print("Part 1 solution: {}\n", .{try depthIncreases(input_file.reader())});
+    try stdout.print("Part 1 solution: {}\n", .{try depthIncreases(reader)});
     try input_file.seekTo(0);
-    try stdout.print("Part 2 solution: {}\n", .{try windowedDepthIncreases(input_file.reader())});
+    try stdout.print("Part 2 solution: {}\n", .{try windowedDepthIncreases(reader)});
 }
