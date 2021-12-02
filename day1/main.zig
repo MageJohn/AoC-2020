@@ -5,21 +5,33 @@ const io = std.io;
 const os = std.os;
 const process = std.process;
 
+fn InputIterator(comptime T: type) type {
+    return struct {
+        input: T,
+        fn next(self: *const InputIterator(T)) !?u16 {
+            var raw_buf: [4]u8 = undefined;
+            const str = (try self.input.readUntilDelimiterOrEof(raw_buf[0..], '\n')) orelse return null;
+            return try fmt.parseInt(u16, str, 10);
+        }
+    };
+}
+
+fn inputIterator(input: anytype) InputIterator(@TypeOf(input)) {
+    return .{ .input = input };
+}
+
 // input is a reader
 fn depthIncreases(input: anytype) !u16 {
-    var raw_buf: [4]u8 = undefined;
-    var depth_str = try input.readUntilDelimiter(raw_buf[0..], '\n');
+    const input_iter = inputIterator(input);
 
-    var last_depth = try fmt.parseInt(u16, depth_str, 10);
-    var cur_depth: u16 = 0;
+    var last_depth = (try input_iter.next()) orelse unreachable;
     var increases: u16 = 0;
 
-    while (true) : (last_depth = cur_depth) {
-        depth_str = (try input.readUntilDelimiterOrEof(raw_buf[0..], '\n')) orelse break;
-        cur_depth = try fmt.parseInt(u16, depth_str, 10);
+    while (try input_iter.next()) |cur_depth| {
         if (cur_depth > last_depth) {
             increases += 1;
         }
+        last_depth = cur_depth;
     }
 
     return increases;
@@ -27,13 +39,11 @@ fn depthIncreases(input: anytype) !u16 {
 
 // input is a reader
 fn windowedDepthIncreases(input: anytype) !u16 {
-    var raw_buf: [4]u8 = undefined;
-    var depth_str: []const u8 = undefined;
+    const input_iter = inputIterator(input);
 
     var window: [4]u16 = undefined;
     for (window) |_, i| {
-        depth_str = try input.readUntilDelimiter(raw_buf[0..], '\n');
-        window[i] = try fmt.parseInt(u16, depth_str, 10);
+        window[i] = (try input_iter.next()) orelse unreachable;
     }
 
     var increases: u16 = 0;
@@ -48,8 +58,7 @@ fn windowedDepthIncreases(input: anytype) !u16 {
             window[i] = window[i + 1];
         }
 
-        depth_str = (try input.readUntilDelimiterOrEof(raw_buf[0..], '\n')) orelse break; 
-        window[window.len - 1] = try fmt.parseInt(u16, depth_str, 10);
+        window[window.len - 1] = (try input_iter.next()) orelse break;
     }
 
     return increases;
@@ -67,18 +76,32 @@ const test_input_data =
     \\260
     \\263
 ;
+
 test "Part 1 example" {
     const test_input = io.fixedBufferStream(test_input_data).reader();
-
-    const result = try depthIncreases(test_input);
-    try std.testing.expectEqual(@intCast(u16, 7), result);
+    try std.testing.expectEqual(
+        @intCast(u16, 7),
+        try depthIncreases(test_input),
+    );
 }
 
 test "Part 2 example" {
     const test_input = io.fixedBufferStream(test_input_data).reader();
+    try std.testing.expectEqual(
+        @intCast(u16, 5),
+        try windowedDepthIncreases(test_input),
+    );
+}
 
-    const result = try windowedDepthIncreases(test_input);
-    try std.testing.expectEqual(@intCast(u16, 5), result);
+test "InputIterator" {
+    const data =
+        \\199
+        \\200
+    ;
+    const iter = inputIterator(io.fixedBufferStream(data).reader());
+    try std.testing.expectEqual(@as(?u16, 199), try iter.next());
+    try std.testing.expectEqual(@as(?u16, 200), try iter.next());
+    try std.testing.expectEqual(@as(?u16, null), try iter.next());
 }
 
 pub fn main() anyerror!void {
