@@ -48,12 +48,12 @@ fn calculateFinalPosition2(steps: []const Step) Position {
     return pos;
 }
 
-inline fn inputToSteps(input: []const u8) ![]const Step {
+inline fn inputToSteps(input: []const u8) []const Step {
     const input_reader = std.io.fixedBufferStream(input).reader();
     var steps: [MAX_INPUT_LEN]Step = undefined;
     var line: [MAX_LINE_LEN]u8 = undefined;
     var index: usize = 0;
-    while (try input_reader.readUntilDelimiterOrEof(line[0..], '\n')) |raw_step| {
+    while (input_reader.readUntilDelimiterOrEof(line[0..], '\n') catch unreachable) |raw_step| {
         steps[index] = .{
             .dir = switch (raw_step[0]) {
                 'f' => .forward,
@@ -79,7 +79,7 @@ const example =
 ;
 
 test "calculateFinalPosition1" {
-    const steps = try inputToSteps(example);
+    const steps = inputToSteps(example);
     const result = calculateFinalPosition1(steps);
 
     try std.testing.expectEqual(Position{ .horizontal = 15, .depth = 10 }, result);
@@ -87,7 +87,7 @@ test "calculateFinalPosition1" {
 }
 
 test "calculateFinalPosition2" {
-    const steps = try inputToSteps(example);
+    const steps = inputToSteps(example);
     const result = calculateFinalPosition2(steps);
 
     try std.testing.expectEqual(Position{ .horizontal = 15, .depth = 60 }, result);
@@ -95,7 +95,7 @@ test "calculateFinalPosition2" {
 }
 
 test "inputToSteps" {
-    const steps = try inputToSteps(example);
+    const steps = inputToSteps(example);
 
     const expected: []const Step = &[6]Step{
         .{ .dir = .forward, .amount = 5 },
@@ -113,7 +113,7 @@ pub fn main() anyerror!void {
     const input = try helpers.readInput("day2/input.txt", MAX_INPUT_LEN * MAX_LINE_LEN);
     const stdout = std.io.getStdOut().writer();
 
-    const steps = try inputToSteps(input);
+    const steps = inputToSteps(input);
 
     const final_pos1 = calculateFinalPosition1(steps);
     const final_pos2 = calculateFinalPosition2(steps);
