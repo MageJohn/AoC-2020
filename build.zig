@@ -36,7 +36,7 @@ pub fn build(b: *std.build.Builder) !void {
             const exe_tests = b.addTest(day_str ++ "/main.zig");
             exe_tests.setBuildMode(mode);
 
-            const test_step = b.step(day_str++"-test", "Run unit tests for day " ++ day_num);
+            const test_step = b.step(day_str ++ "-test", "Run unit tests for day " ++ day_num);
             test_step.dependOn(&exe_tests.step);
         } else |_| {}
     }
