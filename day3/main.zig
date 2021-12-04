@@ -61,8 +61,7 @@ fn calcO2AndCo2(comptime T: type, input: []T) struct { o2: T, co2: T } {
                 return nums[0];
             }
 
-            partition(bit, nums);
-            const pivot = findPivot(bit, nums);
+            const pivot = partition(bit, nums);
             if (nums.len % 2 == 0 and pivot == nums.len / 2) {
                 // pivot is exactly halfway through the array, only possible if
                 // the array has an even number of items. There is no most
@@ -96,13 +95,7 @@ fn calcO2AndCo2(comptime T: type, input: []T) struct { o2: T, co2: T } {
                 }
             }
         }
-        fn findPivot(bit: BitT, nums: []const T) usize {
-            const mask = bitMask(bit);
-            var i: usize = 0;
-            while (nums[i] & mask == 0 and i < nums.len) : (i += 1) {}
-            return i;
-        }
-        fn partition(bit: BitT, nums: []T) void {
+        fn partition(bit: BitT, nums: []T) usize {
             const mask = bitMask(bit);
             var zeros: usize = 0;
             var ones: usize = nums.len;
@@ -116,6 +109,7 @@ fn calcO2AndCo2(comptime T: type, input: []T) struct { o2: T, co2: T } {
                     ones -= 1;
                 }
             }
+            return zeros;
         }
         fn swap(nums: []T, i: usize, j: usize) void {
             const tmp = nums[i];
@@ -128,8 +122,7 @@ fn calcO2AndCo2(comptime T: type, input: []T) struct { o2: T, co2: T } {
     };
 
     // partition into candidate values for o2 and co2
-    Helpers.partition(0, input);
-    const pivot = Helpers.findPivot(0, input);
+    const pivot = Helpers.partition(0, input);
     if (pivot > input.len / 2) {
         return .{
             .o2 = Helpers.filter(1, input[0..pivot], 1),
