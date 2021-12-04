@@ -1,8 +1,5 @@
 const std = @import("std");
-const builtin = @import("builtin");
-
 const Allocator = std.mem.Allocator;
-const assert = std.debug.assert;
 
 /// Parse the list of binary strings as integers of type T. T should be an
 /// unsigned integer type. Caller owns returned memory.
@@ -55,7 +52,6 @@ fn calcO2AndCo2(comptime T: type, input: []T) struct { o2: T, co2: T } {
     const width = @typeInfo(T).Int.bits;
     const BitT = std.math.Log2IntCeil(T);
     const Helpers = struct {
-        const Context = struct { bit: BitT };
         fn filter(bit: BitT, nums: []T, comptime bias: u1) T {
             if (nums.len == 1) {
                 return nums[0];
