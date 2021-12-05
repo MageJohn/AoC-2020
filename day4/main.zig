@@ -6,6 +6,7 @@ const Board = [5][5]u8;
 const MarkableBoard = struct {
     board: *const Board,
     marked: [5][5]bool = [_][5]bool{[_]bool{false} ** 5} ** 5,
+    last_called: u8 = undefined,
 
     const Self = @This();
 
@@ -30,6 +31,7 @@ const MarkableBoard = struct {
             for (row) |num, j| {
                 if (num == called) {
                     self.marked[i][j] = true;
+                    self.last_called = called;
                     return;
                 }
             }
@@ -37,7 +39,7 @@ const MarkableBoard = struct {
         return;
     }
 
-    fn calcScore(self: *const Self, last_called: u8) u32 {
+    fn calcScore(self: *const Self) u32 {
         var sum_unmarked: u32 = 0;
         for (self.board) |row, i| {
             for (row) |num, j| {
@@ -46,7 +48,7 @@ const MarkableBoard = struct {
                 }
             }
         }
-        return sum_unmarked * last_called;
+        return sum_unmarked * self.last_called;
     }
 };
 
@@ -91,44 +93,17 @@ fn parseBoard(board_lines: []const u8) !Board {
     return board;
 }
 
-fn findBestBoardScore(
-    nums: []const u8,
-    boards: []const Board,
-    allocator: *Allocator,
-) !u32 {
-    const markable_boards = init: {
-        var list = try std.ArrayList(MarkableBoard).initCapacity(allocator, boards.len);
-        for (boards) |*board| {
-            list.appendAssumeCapacity(.{ .board = board });
-        }
-        break :init list.toOwnedSlice();
-    };
-    defer allocator.free(markable_boards);
-    for (nums[0..5]) |num| {
-        for (markable_boards) |*board| {
-            board.call(num);
-        }
-    }
-    for (markable_boards) |board| {
-        if (board.hasWon()) {
-            return board.calcScore(nums[4]);
-        }
-    }
-    for (nums[5..]) |num| {
-        for (markable_boards) |*board| {
-            board.call(num);
-            if (board.hasWon()) {
-                return board.calcScore(num);
-            }
-        }
-    }
-    unreachable;
-}
+const Comparison = enum {
+    Best,
+    Worst,
+};
 
-fn findWorstBoardScore(nums: []const u8, boards: []const Board) !u32 {
-    var longestTimeToWin: u32 = 0;
-    var worstBoard: MarkableBoard = undefined;
-    var worstBoardLastCalled: u8 = 0;
+fn findBoardScoreBy(nums: []const u8, boards: []const Board, comptime comparison: Comparison) !u32 {
+    var candidateCallsToWin: u32 = switch (comparison) {
+        .Best => std.math.maxInt(u32),
+        .Worst => 0,
+    };
+    var candidate: MarkableBoard = undefined;
     for (boards) |*board| {
         var mboard = MarkableBoard{ .board = board };
         var timeToWin: u32 = 0;
@@ -140,40 +115,34 @@ fn findWorstBoardScore(nums: []const u8, boards: []const Board) !u32 {
             mboard.call(nums[i]);
             if (mboard.hasWon()) break;
         }
-        if (timeToWin > longestTimeToWin) {
-            longestTimeToWin = timeToWin;
-            worstBoard = mboard;            
-            worstBoardLastCalled = nums[i];
+        if (switch (comparison) {
+            .Best => timeToWin < candidateCallsToWin,
+            .Worst => timeToWin > candidateCallsToWin,
+        }) {
+            candidateCallsToWin = timeToWin;
+            candidate = mboard;
         }
     }
-    return worstBoard.calcScore(worstBoardLastCalled);
+    return candidate.calcScore();
 }
 
 pub fn main() anyerror!void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = &arena.allocator;
-
-    const input = try std.fs.cwd().readFileAlloc(allocator, "day4/input.txt", 10000);
-
-    const parsed = try parseInput(input, allocator);
-    const nums = parsed.nums;
-    const boards = parsed.boards;
-
     const stdout = std.io.getStdOut().writer();
 
-    const best_score = try findBestBoardScore(nums, boards, allocator);
+    const raw_input = try std.fs.cwd().readFileAlloc(allocator, "day4/input.txt", 10000);
+    const input = try parseInput(raw_input, allocator);
 
+    const best_score = try findBoardScoreBy(input.nums, input.boards, .Best);
     try stdout.print("The best board has score {}\n", .{best_score});
 
-    const worst_score = try findWorstBoardScore(nums, boards);
-
+    const worst_score = try findBoardScoreBy(input.nums, input.boards, .Worst);
     try stdout.print("The best board has score {}", .{worst_score});
 }
 
-const ex_nums =
-    \\7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
-;
+const ex_nums = "7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1";
 const ex_nums_parsed = [_]u8{ 7, 4, 9, 5, 11, 17, 23, 2, 0, 14, 21, 24, 10, 16, 13, 6, 15, 25, 12, 22, 18, 20, 8, 19, 3, 26, 1 };
 
 const ex_board1 =
@@ -254,19 +223,20 @@ test "parseInput" {
     try std.testing.expectEqualSlices(Board, &ex_boards, result.boards);
 }
 
-test "findBestBoardScore" {
-    const best_board_score = try findBestBoardScore(
+test "findBoardScoreBy Best" {
+    const best_board_score = try findBoardScoreBy(
         &ex_nums_parsed,
         &ex_boards,
-        test_allocator,
+        .Best,
     );
     try std.testing.expectEqual(@intCast(u32, 4512), best_board_score);
 }
 
-test "findWorstBoardScore" {
-    const worst_board_score = try findWorstBoardScore(
+test "findBoardScoreBy Worst" {
+    const worst_board_score = try findBoardScoreBy(
         &ex_nums_parsed,
         &ex_boards,
+        .Worst,
     );
     try std.testing.expectEqual(@intCast(u32, 1924), worst_board_score);
 }
