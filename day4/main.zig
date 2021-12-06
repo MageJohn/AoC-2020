@@ -1,14 +1,20 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const Board = [5][5]u8;
+fn Board(comptime T: type) type {
+    return [5][5]T;
+}
 
 const MarkableBoard = struct {
-    board: *const Board,
-    marked: [5][5]bool = [_][5]bool{[_]bool{false} ** 5} ** 5,
+    board: *const Board(u8),
+    marked: Board(bool) = [_][5]bool{[_]bool{false} ** 5} ** 5,
     last_called: u8 = undefined,
 
     const Self = @This();
+
+    fn init(board: *const Board(u8)) MarkableBoard {
+        return .{ .board = board };
+    }
 
     fn hasWon(self: *const Self) bool {
         var col_wins = [_]bool{true} ** 5;
@@ -27,12 +33,12 @@ const MarkableBoard = struct {
     }
 
     fn call(self: *Self, called: u8) void {
-        for (self.board) |row, i| {
+        outer: for (self.board) |row, i| {
             for (row) |num, j| {
                 if (num == called) {
                     self.marked[i][j] = true;
                     self.last_called = called;
-                    return;
+                    break :outer;
                 }
             }
         }
@@ -50,9 +56,24 @@ const MarkableBoard = struct {
         }
         return sum_unmarked * self.last_called;
     }
+
+    pub fn format(self: *const Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        for (self.board) |row, i| {
+            for (row) |num, j| {
+                if (self.marked[i][j]) {
+                    try writer.print("\x1b[1m{d: >2}\x1b[0m ", .{num});
+                } else {
+                    try writer.print("{d: >2} ", .{num});
+                }
+            }
+            try writer.writeByte('\n');
+        }
+    }
 };
 
-const ParseInputResult = struct { nums: []const u8, boards: []Board };
+const ParseInputResult = struct { nums: []const u8, boards: []Board(u8) };
 
 fn parseInput(input: []const u8, allocator: *Allocator) !ParseInputResult {
     var iter = std.mem.split(u8, input, "\n\n");
@@ -60,7 +81,7 @@ fn parseInput(input: []const u8, allocator: *Allocator) !ParseInputResult {
     const nums_line = iter.next() orelse unreachable;
     const nums = try parseNums(nums_line, allocator);
 
-    var boards = std.ArrayList(Board).init(allocator);
+    var boards = std.ArrayList(Board(u8)).init(allocator);
     while (iter.next()) |board_lines| {
         try boards.append(try parseBoard(board_lines));
     }
@@ -77,9 +98,9 @@ fn parseNums(nums_line: []const u8, allocator: *Allocator) ![]u8 {
     return nums.toOwnedSlice();
 }
 
-fn parseBoard(board_lines: []const u8) !Board {
+fn parseBoard(board_lines: []const u8) !Board(u8) {
     var row_iter = std.mem.split(u8, board_lines, "\n");
-    var board: Board = undefined;
+    var board: Board(u8) = undefined;
     var i: u8 = 0;
     while (row_iter.next()) |row| : (i += 1) {
         if (row.len == 0) break;
@@ -98,28 +119,28 @@ const Comparison = enum {
     Worst,
 };
 
-fn findBoardScoreBy(nums: []const u8, boards: []const Board, comptime comparison: Comparison) !u32 {
+fn findBoardScoreBy(nums: []const u8, boards: []const Board(u8), comptime comparison: Comparison) !u32 {
     var candidateCallsToWin: u32 = switch (comparison) {
         .Best => std.math.maxInt(u32),
         .Worst => 0,
     };
     var candidate: MarkableBoard = undefined;
     for (boards) |*board| {
-        var mboard = MarkableBoard{ .board = board };
-        var timeToWin: u32 = 0;
+        var mboard = MarkableBoard.init(board);
+        var callsToWin: u32 = 0;
         var i: usize = 0;
         while (true) : ({
-            timeToWin += 1;
+            callsToWin += 1;
             i += 1;
         }) {
             mboard.call(nums[i]);
             if (mboard.hasWon()) break;
         }
         if (switch (comparison) {
-            .Best => timeToWin < candidateCallsToWin,
-            .Worst => timeToWin > candidateCallsToWin,
+            .Best => callsToWin < candidateCallsToWin,
+            .Worst => callsToWin > candidateCallsToWin,
         }) {
-            candidateCallsToWin = timeToWin;
+            candidateCallsToWin = callsToWin;
             candidate = mboard;
         }
     }
@@ -192,7 +213,7 @@ const ex_board3_parsed = [5][5]u8{
 
 const example = ex_nums ++ "\n\n" ++ ex_board1 ++ "\n\n" ++ ex_board2 ++ "\n\n" ++ ex_board3;
 
-const ex_boards = [_]Board{
+const ex_boards = [_][5][5]u8{
     ex_board1_parsed,
     ex_board2_parsed,
     ex_board3_parsed,
@@ -220,7 +241,7 @@ test "parseInput" {
     defer test_allocator.free(result.boards);
 
     try std.testing.expectEqualSlices(u8, &ex_nums_parsed, result.nums);
-    try std.testing.expectEqualSlices(Board, &ex_boards, result.boards);
+    try std.testing.expectEqualSlices(Board(u8), &ex_boards, result.boards);
 }
 
 test "findBoardScoreBy Best" {
