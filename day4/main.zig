@@ -75,7 +75,7 @@ const MarkableBoard = struct {
 
 const ParseInputResult = struct { nums: []const u8, boards: []Board(u8) };
 
-fn parseInput(input: []const u8, allocator: *Allocator) !ParseInputResult {
+fn parseInput(input: []const u8, allocator: Allocator) !ParseInputResult {
     var iter = std.mem.split(u8, input, "\n\n");
 
     const nums_line = iter.next() orelse unreachable;
@@ -89,7 +89,7 @@ fn parseInput(input: []const u8, allocator: *Allocator) !ParseInputResult {
     return ParseInputResult{ .nums = nums, .boards = boards.toOwnedSlice() };
 }
 
-fn parseNums(nums_line: []const u8, allocator: *Allocator) ![]u8 {
+fn parseNums(nums_line: []const u8, allocator: Allocator) ![]u8 {
     var iter = std.mem.split(u8, nums_line, ",");
     var nums = std.ArrayList(u8).init(allocator);
     while (iter.next()) |num| {
@@ -150,7 +150,7 @@ fn findBoardScoreBy(nums: []const u8, boards: []const Board(u8), comptime compar
 pub fn main() anyerror!void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
-    const allocator = &arena.allocator;
+    const allocator = arena.allocator();
     const stdout = std.io.getStdOut().writer();
 
     const raw_input = try std.fs.cwd().readFileAlloc(allocator, "day4/input.txt", 10000);

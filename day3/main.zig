@@ -3,7 +3,7 @@ const Allocator = std.mem.Allocator;
 
 /// Parse the list of binary strings as integers of type T. T should be an
 /// unsigned integer type. Caller owns returned memory.
-fn parseInput(comptime T: type, input: []const u8, allocator: *Allocator) ![]T {
+fn parseInput(comptime T: type, input: []const u8, allocator: Allocator) ![]T {
     var nums = std.ArrayList(T).init(allocator);
     var it = std.mem.split(u8, input, "\n");
     while (it.next()) |line| {
@@ -135,7 +135,7 @@ fn calcO2AndCo2(comptime T: type, input: []T) struct { o2: T, co2: T } {
 pub fn main() anyerror!void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
-    const allocator = &arena.allocator;
+    const allocator = arena.allocator();
 
     const input = try std.fs.cwd().readFileAlloc(allocator, "day3/input.txt", 1000 * 13);
     var nums = try parseInput(u12, input, allocator);
