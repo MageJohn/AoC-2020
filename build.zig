@@ -25,7 +25,7 @@ pub fn build(b: *std.build.Builder) !void {
             exe.addPackagePath("helpers", "helpers.zig");
 
             const run_cmd = exe.run();
-            run_cmd.step.dependOn(b.getInstallStep());
+            if (exe.install_step) |install_step| run_cmd.step.dependOn(&install_step.step);
             if (b.args) |args| {
                 run_cmd.addArgs(args);
             }
