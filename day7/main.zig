@@ -59,52 +59,11 @@ pub fn main() anyerror!void {
     try stdout.print("Total fuel (part 1): {d}\n", .{total_fuel_1});
 
     const avg = mean(1000, nums);
-    // const total_fuel_2 = sumSquaredAndAbsDeviation(&nums, avg);
-
-    // try stdout.print("Total fuel (part 2): {}\n", .{total_fuel_2});
-
     const floor_avg = @floor(avg);
     const ceil_avg = @ceil(avg);
-    std.debug.print("average: {d:.2}. floor(avg) = {d}, ceil(avg) = {d}\n", .{ avg, floor_avg, ceil_avg });
-    std.debug.print(
-        \\sum abs deviation from:
-        \\  avg        {d}
-        \\  floor(avg) {d}
-        \\  ceil(avg)  {d}
-        \\
-        ,
-        .{
-            sumAbsDeviation(&nums, avg),
-            sumAbsDeviation(&nums, floor_avg),
-            sumAbsDeviation(&nums, ceil_avg),
-        },
-    );
-    std.debug.print(
-        \\sum squared deviation from:
-        \\  avg        {d}
-        \\  floor(avg) {d}
-        \\  ceil(avg)  {d}
-        \\
-        ,
-        .{
-            sumSquaredDeviation(&nums, avg),
-            sumSquaredDeviation(&nums, floor_avg),
-            sumSquaredDeviation(&nums, ceil_avg),
-        },
-    );
-    std.debug.print(
-        \\sum (squared deviation + abs deviation)/2 from:
-        \\  avg        {d}
-        \\  floor(avg) {d}
-        \\  ceil(avg)  {d}
-        \\
-        ,
-        .{
-            (sumSquaredDeviation(&nums, avg) + sumAbsDeviation(&nums, avg))/2,
-            (sumSquaredDeviation(&nums, floor_avg) + sumAbsDeviation(&nums, floor_avg))/2,
-            (sumSquaredDeviation(&nums, ceil_avg) + sumAbsDeviation(&nums, ceil_avg))/2,
-        },
-    );
+    const fuel_a = (sumSquaredDeviation(&nums, floor_avg) + sumAbsDeviation(&nums, floor_avg))/2;
+    const fuel_b = (sumSquaredDeviation(&nums, ceil_avg) + sumAbsDeviation(&nums, ceil_avg))/2;
+    try stdout.print("Total fuel (part 2): {d}\n", .{@minimum(fuel_a, fuel_b)});
 }
 
 const example = "16,1,2,0,4,2,7,1,2,14";
