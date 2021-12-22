@@ -54,9 +54,9 @@ pub fn iterMap(iter: anytype, func: anytype) IterMap(
     };
 }
 
-pub fn IterMap(comptime Context: type, comptime In: type, comptime Out: type) type {
+pub fn IterMap(comptime Iterator: type, comptime In: type, comptime Out: type) type {
     return struct {
-        iter: Context,
+        iter: Iterator,
         func: fn (val: In) Out,
 
         pub fn next(self: *@This()) ?Out {
