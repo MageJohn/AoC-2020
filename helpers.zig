@@ -59,7 +59,7 @@ pub fn IterMap(comptime Context: type, comptime In: type, comptime Out: type) ty
         iter: Context,
         func: fn (val: In) Out,
 
-        fn next(self: *@This()) ?Out {
+        pub fn next(self: *@This()) ?Out {
             return if (self.iter.next()) |in|
                 self.func(in)
             else
