@@ -43,25 +43,28 @@ test "fillFromIter" {
     try std.testing.expectEqualSlices(u8, &.{4, 3, 2, 1, 0}, slice);
 }
 
-pub fn iterMap(iter: anytype, func: anytype) IterMap(
+pub fn iterMap(iter: anytype, context: anytype, func: anytype) IterMap(
     @TypeOf(iter),
+    @TypeOf(context),
     @typeInfo(std.meta.declarationInfo(@TypeOf(iter), "next").data.Fn.return_type).Optional.child,
     @typeInfo(@TypeOf(func)).Fn.return_type.?,
 ) {
     return .{
         .iter = iter,
+        .context = context,
         .func = func,
     };
 }
 
-pub fn IterMap(comptime Iterator: type, comptime In: type, comptime Out: type) type {
+pub fn IterMap(comptime Iterator: type, comptime Context: type, comptime In: type, comptime Out: type) type {
     return struct {
         iter: Iterator,
-        func: fn (val: In) Out,
+        context: Context,
+        func: fn (context: Context, val: In) Out,
 
         pub fn next(self: *@This()) ?Out {
             return if (self.iter.next()) |in|
-                self.func(in)
+                self.func(self.context, in)
             else
                 null;
         }
@@ -70,13 +73,13 @@ pub fn IterMap(comptime Iterator: type, comptime In: type, comptime Out: type) t
 
 test "iterMap" {
     const H = struct {
-        fn parseDigit(d: []const u8) u4 {
+        fn parseDigit(_: void, d: []const u8) u4 {
             std.debug.assert(d.len == 1);
             return @intCast(u4, d[0] - '0');
         }
     };
     var iter = std.mem.split(u8, "1 2 3 4 5 6 7 8 9", " ");
-    var mapped_iter = iterMap(iter, H.parseDigit);
+    var mapped_iter = iterMap(iter, {}, H.parseDigit);
 
     var expected: u4 = 1;
     while (mapped_iter.next()) |n| : (expected += 1) {

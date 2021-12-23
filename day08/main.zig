@@ -3,7 +3,7 @@ const helpers = @import("helpers");
 
 const assert = std.debug.assert;
 
-fn parsePattern(patt: []const u8) u8 {
+fn parsePattern(_: void, patt: []const u8) u8 {
     var ret: u8 = 0;
     for (patt) |char| {
         ret |= @intCast(u8, 1) << @intCast(u3, (char - 'a'));
@@ -25,7 +25,7 @@ fn parseInput(input: []const u8, comptime len: usize) [len]Case {
         var part_iter = std.mem.split(u8, line, " | ");
 
         inline for (std.meta.fields(Case)) |field| {
-            var iter = helpers.iterMap(std.mem.split(u8, part_iter.next().?, " "), parsePattern);
+            var iter = helpers.iterMap(std.mem.split(u8, part_iter.next().?, " "), {}, parsePattern);
             _ = helpers.fillFromIter(u8, &iter, &@field(cases[case_i], field.name));
         }
     }
@@ -160,7 +160,7 @@ test "parsePattern" {
     };
 
     inline for (cases) |case| {
-        try std.testing.expectEqual(@intCast(u8, case.@"1"), parsePattern(case.@"0"));
+        try std.testing.expectEqual(@intCast(u8, case.@"1"), parsePattern({}, case.@"0"));
     }
 }
 
