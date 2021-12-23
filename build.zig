@@ -15,7 +15,7 @@ pub fn build(b: *std.build.Builder) !void {
 
     comptime var i = 1;
     inline while (i <= 25) : (i += 1) {
-        const day_num: []const u8 = &(if (i < 10) .{'0' + i} else .{ '0' + @divTrunc(i, 10), '0' + @rem(i, 10) });
+        const day_num: []const u8 = &(if (i < 10) .{'0', '0' + i} else .{ '0' + @divTrunc(i, 10), '0' + @rem(i, 10) });
         const day_str = "day" ++ day_num;
         if (cwd.access(day_str, .{})) |_| {
             const exe = b.addExecutable(day_str, day_str ++ "/main.zig");
